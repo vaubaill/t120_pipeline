@@ -15,7 +15,7 @@ t120.log.info('allsubpath '+' '.join(allsubpath))
 for subpath in allsubpath:
     subpath= subpath+'/'
     t120.log.info('Now treating directory: '+subpath)
-    """
+    
     # make journal
     makeobslog(subpath+'ORIGINAL/')
     # first clean directories
@@ -39,7 +39,7 @@ for subpath in allsubpath:
     t120_insert_radec(subpath)
     # put more accurate RADEC into file
     t120_getradec(path=subpath+t120.t120_redu_dir)
-    """
+    
     # makes astrometry
     launch_astromatic('',path=subpath,procdir='REDUCED/',Lsex=False,Lscamp=True,LscampNFOV=False)
     # put new header into files
