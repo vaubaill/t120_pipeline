@@ -1,0 +1,13 @@
+EQUINOX =        2000.00000000 / Mean equinox                                  
+RADESYS = 'ICRS    '           / Astrometric system                            
+CTYPE1  = 'RA---TAN'           / WCS projection type for this axis             
+CTYPE2  = 'DEC--TAN'           / WCS projection type for this axis             
+CUNIT1  = 'deg     '           / Axis unit                                     
+CUNIT2  = 'deg     '           / Axis unit                                     
+CRPIX1  =   1024               / Reference pixel on this axis                  
+CRPIX2  =   1024               / Reference pixel on this axis                  
+CD1_1   =  -1.901436898818E-04 / Linear projection matrix                      
+CD1_2   =  -9.247778692366E-07 / Linear projection matrix                      
+CD2_1   =  -9.459775686055E-07 / Linear projection matrix                      
+CD2_2   =   1.903517938203E-04 / Linear projection matrix                      
+END     
