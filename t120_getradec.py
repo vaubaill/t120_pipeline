@@ -13,7 +13,6 @@ from astroquery.jplhorizons import Horizons
 from astropy.io import fits
 from astroquery.jplhorizons import conf
 
-
 def get_name(fitsfile):
     """Extract Solar system object from fits file using header.
     
@@ -30,8 +29,7 @@ def get_name(fitsfile):
     """
     hdul = fits.open(fitsfile)
     hdr = hdul[0].header
-    ssolname = hdr['OBJECT']
-    
+    ssolname = hdr['OBJECT'].upper().replace(' ','')
     return ssolname
 
 def get_nametime(fitsfile):
@@ -52,7 +50,7 @@ def get_nametime(fitsfile):
     """
     hdul = fits.open(fitsfile)
     hdr = hdul[0].header
-    ssolname = hdr['OBJECT'].strip()
+    ssolname = hdr['OBJECT'].upper().strip()
     time = Time(hdr['DATE-OBS'],format='isot')
     hdul.close()
     return (ssolname,time)
@@ -71,6 +69,14 @@ def get_radec_fromjpl(ssid='',location='511',jd=2454545.0):
     
     Parameters
     ----------
+    ssid : string, optional
+        JPL id of the object to be found.
+        Default is empty string.
+    location : string, optional
+        IAU observatory code. Default is '511' (OHP).
+    jd : float, optional
+        Juliand day for the computation of the ephemeris.
+        Default is J2000.
     
     Returns
     -------
@@ -95,7 +101,6 @@ def get_radec_fromjpl(ssid='',location='511',jd=2454545.0):
             raise(e)
     skycoo = SkyCoord(eph['RA'][0],eph['DEC'][0],unit='deg',obstime=Time(jd,format='jd'))
     t120.log.info(ssid+' '+skycoo.to_string(style='hmsdms'))
-    
     return skycoo
 
 
@@ -152,11 +157,10 @@ def get_radec_fromtxt(name,txt):
     found = False
     with open(txt,'r') as f:
         for line in f.readlines():
-            if name in line:
+            if name.upper() in line.upper():
                 radec = line.split("'")[1]
                 skycoo = SkyCoord(radec.split()[0],radec.split()[1], unit=(u.hourangle, u.deg))
                 found = True
-    
     if not found:
         msg = '*** FATAL ERROR: '+name+' was not found in '+txt
         t120.log.error(msg)
@@ -184,17 +188,15 @@ def get_jplid_fromtxtid(name,txtid):
         msg = '*** FATAL ERROR: file '+txtid+' does not exist'
         t120.log.error(msg)
         raise IOError(msg)
-    
     # read txtid file
     found = False
     t120.log.info('Now reading file: '+txtid+' and searching for '+name)
     with open(txtid,'r') as f:
         for line in f.readlines():
-            if name in line:
-                t120.log.info(name+' found in file: '+txtid)
+            if name.upper() in line.upper():
+                t120.log.info(name.upper()+' found in file: '+txtid)
                 jplid = line.split()[1]
                 found = True
-    
     if not found:
         msg = '*** FATAL ERROR: '+name+' was not found in '+txtid
         t120.log.error(msg)
@@ -233,17 +235,14 @@ def put_radec(fitsfile,skycoo):
     hdu.header['OBJCTDEC'] = (skycoo.dec.to('deg').value,comm['OBJCTDEC'])
     hdu.header['CRVAL1'] = (skycoo.ra.to('deg').value ,'Reference Right ascencion in decimal deg')
     hdu.header['CRVAL2'] = (skycoo.dec.to('deg').value,'Reference Declination in decimal deg')
-    hdu.header['OBJCTALT'] = (altaz.alt.to('deg').value ,'Reference altitude (elevation) in deg')
-    hdu.header['OBJCTAZ'] = (altaz.az.to('deg').value,'Reference azimuth in deg')
-    hdu.header['OBJCTHA'] = ((altaz.az-180.0*u.deg).to('hourangle').value,'Hour angle')
-    hdu.header['AIRMASS'] = (altaz.secz.value,'Air mass')
     hdu.header['HISTORY'] = 'RA,DEC values inserted with py routine.'
     hdu.writeto(fitsfile,overwrite=True)
     t120.log.info('File '+fitsfile+' successfully updated with RADEC info')
+    return
 
 
-def t120_getradec(path = '/Users/vaubaill/OBSERVATIONS/OHPT120/2018/2018-08-16-DU-ECU/'+t120.t120_redu_dir,
-        root = '',loc='511',
+def t120_getradec(path=t120.t120_data_path+t120.t120_redu_dir,
+        root = '*',loc='511',
         Ljpl=True,Lname=True,Ljpltxt=True,Lnametxt=True,
         blockJPL=False,blockName=False,blockJPLtxt=False,blockTxt=False,blockFound=True):
     """Get RA,DEC of center of FOV from object coordinates.
@@ -261,12 +260,15 @@ def t120_getradec(path = '/Users/vaubaill/OBSERVATIONS/OHPT120/2018/2018-08-16-D
     TBF
     
     """
-    
-    pattern = path+root+'*.fits'
+    pattern = path+root+'*-c.fits'
     listfile=glob.glob(pattern)
     if (len(listfile)==0):
         raise IOError('*** FATAL ERROR: no file of type '+pattern)
     for fitsfile in listfile:
+        if '-c-c.fits' in fitsfile:
+            msg='*** Warning: file with double -c will be deleted: '+fitsfile
+            os.remove(fitsfile)
+            continue
         skycoo = None
         (objname,time) = get_nametime(fitsfile)
         t120.log.info('*** Now processing: '+fitsfile+' '+objname+' '+time.isot)
@@ -326,6 +328,7 @@ def t120_getradec(path = '/Users/vaubaill/OBSERVATIONS/OHPT120/2018/2018-08-16-D
         else:
             t120.log.info('\n \n *** '+objname+' coordinates at '+time.isot+' : '+skycoo.to_string())
             put_radec(fitsfile,skycoo)
-    
+        
     t120.log.info('Done.')
+    return
 

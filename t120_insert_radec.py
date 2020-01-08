@@ -8,35 +8,53 @@ from ccdproc import CCDData, Combiner, subtract_dark,flat_correct,ImageFileColle
 import numpy as np
 import ccdproc
 
+from t120_init import t120
 
-def t120_insert_radec(work_dir,objcoo):
-
-   comm		= {'OBJCTRA':'Nominal Right Ascension of center of image',
-		   'OBJCTDEC':'Nominal Declination of center of image'}
-
-   for fit_file in glob.glob(work_dir+'*-c.fits'):
-    hdulist	= fits.open(fit_file)
-    hdu		= hdulist[0]
-    data	= hdu.data
-    target_name	= hdu.header['OBJECT'].strip()
-    hdu.header['OBJECT']		= (target_name.upper().replace(' ',''),'Target name')
-    skycoo		= SkyCoord(objcoo[hdu.header['OBJECT']][0]+' '+objcoo[hdu.header['OBJECT']][1], unit=(u.hourangle, u.deg))
-    time		= Time(hdu.header['DATE-OBS'])
-    site		= EarthLocation(lat=hdu.header['SITELAT'], lon=hdu.header['SITELONG']) 
-    altazframe		= AltAz(obstime=time, location=site)
-    altaz		= skycoo.transform_to(altazframe)
-    try:
-      hdu.header['OBJCTRA']	= (objcoo[hdu.header['OBJECT']][0],comm['OBJCTRA'])
-      hdu.header['OBJCTDEC']	= (objcoo[hdu.header['OBJECT']][1],comm['OBJCTDEC'])
-      hdu.header['CRVAL1']		= (skycoo.ra.to('deg').value ,'Reference Right ascencion in decimal deg')
-      hdu.header['CRVAL2']		= (skycoo.dec.to('deg').value,'Reference Declination in decimal deg')
-      hdu.header['OBJCTALT']	= (altaz.alt.to('deg').value ,'Reference altitude (elevation) in deg')
-      hdu.header['OBJCTAZ']	= (altaz.az.to('deg').value,'Reference azimuth in deg')
-      hdu.header['OBJCTHA']	= ((altaz.az-180.0*u.deg).to('hourangle').value,'Hour angle')
-      hdu.header['AIRMASS']	= (altaz.secz.value,'Air mass')
-    except:
-      msg= '*** FATAL ERROR: target '+target_name+' not found'
-      raise ValueError(msg)
-    hdu.writeto(fit_file,overwrite=True)
-
+def t120_insert_radec(work_dir,ahead_file=t120.t120_scamp_ahead,reduc_root='-c.fits'):
+    """Put object RA,DEC in fits header
+    
+    Parameters
+    ----------
+    work_dir : string
+        directory name root where original fits image files are to be found.
+    ahead_file : string
+        Scamp ahead file to consider to put basic astrometry info.
+    reduc_root : string
+        Reduced file name suffix. Default is '-c.fit'.
+    
+    Returns
+    -------
+    None.
+    
+    
+    """
+    redu_dir=work_dir + t120.t120_redu_dir
+    t120.log.info('redu_dir '+redu_dir)
+    
+    comm = {'OBJCTRA':'Nominal Right Ascension of center of image',
+           'OBJCTDEC':'Nominal Declination of center of image'}
+    
+    for fit_file in glob.glob(redu_dir+'*-c.fits'):
+        t120.log.info('*** Now opening image '+fit_file)
+        hdulist = fits.open(fit_file)
+        hdu = hdulist[0]
+        hdr = hdu.header
+        data = hdu.data
+        target_name = hdr['OBJECT'].strip()
+        hdr['OBJECT'] = (target_name.upper().replace(' ',''),'Target name')
+        skycoo = SkyCoord(hdr['OBJCTRA'],hdr['OBJCTDEC'], unit=(u.hourangle, u.deg))
+        time = Time(hdr['DATE-OBS'])
+        site = EarthLocation(lat=hdr['SITELAT'], lon=hdr['SITELONG']) 
+        hdr['CRVAL1'] = (skycoo.ra.to('deg').value ,'Reference Right ascencion in decimal deg')
+        hdr['CRVAL2'] = (skycoo.dec.to('deg').value,'Reference Declination in decimal deg')
+        # now put astrometry info from ahead_file
+        aheader = fits.Header.fromfile(ahead_file,sep='\n',endcard=False,padding=False)
+        for ahdr in aheader:
+            #nhdr=len(hdr)
+            t120.log.debug('Setting: '+ahdr+' with value: '+str(aheader.cards[ahdr].value))
+            hdr.set(ahdr,value=aheader.cards[ahdr].value,comment=aheader.cards[ahdr].comment)
+        hdr.add_history('BASIC ASTROMETRY WAS TAKEN FROM FILE '+ahead_file)
+        hdu.writeto(fit_file,overwrite=True)
+        t120.log.info('Image saved in '+fit_file)
+    return
 
