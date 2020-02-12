@@ -1,4 +1,10 @@
-""" Launches astromatic programs
+""" Launches astromatic programs for OHP T120 images.
+
+See also
+--------
+www.astromatic.net
+https://readthedocs.org/projects/sextractor/
+https://readthedocs.org/projects/scamp/
 
 """
 
@@ -17,7 +23,7 @@ from t120_init import t120
 
 
 def put_all_new_header(path,mincontrast=2.0,astrodir=t120.t120_astr_dir):
-    """Put SCAMP  computed header into image files.
+    """Put SCAMP computed header into image files.
     
     Parameters
     ----------
@@ -185,6 +191,11 @@ def launch_astromatic(root,path='./',procdir=t120.t120_redu_dir,Lsex=False,Lpsfe
         If True, SCAMP is launched.
     Lnewahead : boolean, optional
         If True, the new ahead file is updated.
+    LscampNFOV : boolean, optional
+        If True, SCAMP is run twice: the 2nd time with a narrow field search for matching stars.
+        Advantage: when there are many stars and SCAMP works great, the astrometry solution is better.
+        The risk is that SCAMP cannot converge and make the solution worse.
+        Default is False.
     
     Returns
     -------

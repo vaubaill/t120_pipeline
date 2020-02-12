@@ -9,9 +9,8 @@ from astropy.time import Time
 from astropy.coordinates import SkyCoord, EarthLocation, AltAz
 from astropy import units as u
 from t120_init import t120
-from astroquery.jplhorizons import Horizons
+from astroquery.jplhorizons import conf, Horizons
 from astropy.io import fits
-from astroquery.jplhorizons import conf
 
 def get_name(fitsfile):
     """Extract Solar system object from fits file using header.
@@ -56,7 +55,15 @@ def get_nametime(fitsfile):
     return (ssolname,time)
 
 def defhorserver():
-    """Change astroquery.jplhorizons server config.
+    """Change astroquery.jplhorizons (HORIZONS) server config.
+    
+    Parameters
+    ----------
+    None.
+    
+    Returns
+    -------
+    None.
     
     """
     horserver = 'https://ssd.jpl.nasa.gov/horizons_batch.cgi'

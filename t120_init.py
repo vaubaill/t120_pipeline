@@ -1,7 +1,10 @@
-# T120 pipeline initialization
-#
-# J. Vaubaillon, IMCCE, 2018
-#
+"""T120 pipeline initialization
+
+Author
+------
+J. Vaubaillon, IMCCE, 2018
+
+"""
 import os
 import sys
 import glob
@@ -125,25 +128,27 @@ def makeobslog(path,root=''):
     None.
     
     """
-    
-    # user definitions example
-    # path = t120.t120_data_path + '2019/2019-07-29-DU-ECU/ORIGINAL/'
-    # root = ''
-    
-    # start of program: do not touch
+    # set file name and pattern
     fileout = path+ 'journal' + root + '.log'
     pattern = path +  root + '*.fit*'
+    # make list of files from pattern
     listfile = glob.glob(pattern)
     nfile = len(listfile)
+    # check number of files
     if (nfile==0):
         msg = '*** WARNING: there is no file of type: '+pattern
-        t120.log.warning(msg)
+        t120.log.error(msg)
         raise IOError(msg)
     t120.log.info('There are '+str(nfile)+' files of type '+pattern)
+    # get common prefix to all files
     prefix = os.path.commonprefix(listfile)
-    # create output table: make a first dummy row so astropy.table.QTable knows 'FILTER' is a string
-    data = QTable([['                                            '],['                    '],
-                [0.0],[0.0],[0.0],[0.0],[' '],[0.0]],
+    # create output table:
+    # method 1: obsolete and dumb... make a first dummy row so astropy.table.QTable knows 'FILTER' is a string
+    #data = QTable([['                                            '],['                    '],
+    #            [0.0],[0.0],[0.0],[0.0],[' '],[0.0]],
+    #            names=['FILE','TARGET','JD','RA (deg)','DEC (deg)','EXP (s)','FILTER','AIRMASS'])
+    # method 2: declare types
+    data = QTable(dtype=[object,object,float,float,float,float,object,float]
                 names=['FILE','TARGET','JD','RA (deg)','DEC (deg)','EXP (s)','FILTER','AIRMASS'])
     # loop over the files
     for imgfile in listfile:
@@ -166,8 +171,8 @@ def makeobslog(path,root=''):
         data.add_row([imgfile.replace(prefix,'').lstrip(),target_name,JD,RAcenter,DEcenter,exptime,filtr,airmass])
         t120.log.debug('File='+imgfile+' TARGET'+target_name+' JD='+str(JD)+' RA='+str(RAcenter)+' DE='+str(DEcenter)+
                   ' exp='+str(exptime)+' fil='+str(filtr)+' airmass='+str(airmass))
-    # remove first row
-    data.remove_row(0)
+    # remove first row : useful if method 1 is used: obsolete and dumb...
+    #data.remove_row(0)
     # save log in file
     ascii.write(data,fileout,format='fixed_width',delimiter=' ',formats={'JD': '%18.12f'},overwrite=True)
     t120.log.info('There are '+str(len(listfile))+' data saved in '+fileout)
